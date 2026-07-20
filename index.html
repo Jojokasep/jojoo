@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JoJo TopUp - Jasa Isi Saldo E-Wallet</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #060609;
+            --bg2: #0e0e14;
+            --card: #131319;
+            --card-hover: #1a1a24;
+            --border: #22222f;
+            --fg: #e4e4ee;
+            --fg-dim: #9a9ab0;
+            --fg-muted: #55556a;
+            --accent: #00e68a;
+            --accent2: #00cc7a;
+            --accent-dim: rgba(0,230,138,0.08);
+            --accent-glow: rgba(0,230,138,0.2);
+            --danger: #ff4466;
+            --danger-dim: rgba(255,68,102,0.1);
+            --dana: #108ee9;
+            --ovo: #4c3494;
+            --gopay: #00aed6;
+            --shopeepay: #ee4d2d;
+            --radius: 16px;
+            --radius-sm: 10px;
+            --radius-xs: 6px;
+        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg); color: var(--fg);
+            min-height: 100vh; overflow-x: hidden;
+        }
+
+        /* === ATMOSFER === */
+        .atmo { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+        .atmo .orb {
+            position: absolute; border-radius: 50%; filter: blur(140px);
+            animation: drift 25s ease-in-out infinite alternate;
+        }
+        .atmo .orb:nth-child(1) { width: 600px; height: 600px; background: var(--accent); top: -20%; left: -15%; opacity: 0.12; }
+        .atmo .orb:nth-child(2) { width: 450px; height: 450px; background: #0088ff; bottom: -15%; right: -10%; opacity: 0.06; animation-delay: -10s; }
+        .atmo .orb:nth-child(3) { width: 300px; height: 300px; background: var(--accent); top: 40%; left: 60%; opacity: 0.05; animation-delay: -18s; }
+        @keyframes drift {
+            0% { transform: translate(0,0) scale(1); }
+            33% { transform: translate(40px,-50px) scale(1.08); }
+            66% { transform: translate(-30px,40px) scale(0.94); }
+            100% { transform: translate(20px,-20px) scale(1.03); }
+        }
+        .grid-bg {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
+            background-size: 64px 64px;
+        }
+
+        /* === LAYOUT === */
+        .app {
+            position: relative; z-index: 1;
+            max-width: 480px; margin: 0 auto;
+            padding: 16px 16px 60px;
+        }
+
+        /* === HEADER === */
+        .hdr { text-align: center; padding: 20px 0 4px; }
+        .hdr-logo {
+            display: inline-flex; align-items: center; gap: 10px; margin-bottom: 4px;
+        }
+        .hdr-icon {
+            width: 40px; height: 40px; border-radius: 11px;
+            background: linear-gradient(135deg, var(--accent), #009960);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; color: #000; font-weight: 700;
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+        .hdr h1 {
+            font-size: 24px; font-weight: 700; letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #fff 30%, var(--accent));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .hdr p { color: var(--fg-muted); font-size: 12px; margin-top: 2px; }
+
+        /* === TAB SWITCH === */
+        .tab-bar {
+            display: flex; background: var(--card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 4px; margin-top: 22px;
+            position: relative;
+        }
+        .tab-btn {
+            flex: 1; padding: 11px 8px; border: none; background: transparent;
+            color: var(--fg-muted); font-family: inherit; font-size: 13px; font-weight: 600;
+            cursor: pointer; border-radius: calc(var(--radius) - 4px);
+            transition: color 0.25s; position: relative; z-index: 2;
+            display: flex; align-items: center; justify-content: center; gap: 7px;
+        }
+        .tab-btn.active { color: #000; }
+        .tab-btn:not(.active):hover { color: var(--fg-dim); }
+        .tab-slider {
+            position: absolute; top: 4px; left: 4px;
+            width: calc(50% - 4px); height: calc(100% - 8px);
+            background: var(--accent); border-radius: calc(var(--radius) - 4px);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1;
+        }
+        .tab-slider.right { transform: translateX(100%); }
+
+        /* === PANELS === */
+        .panel { display: none; animation: panelIn 0.3s ease-out; }
+        .panel.active { display: block; }
+        @keyframes panelIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+        /* === SALDO CARD === */
+        .saldo-card {
+            margin-top: 18px; padding: 22px;
+            background: linear-gradient(150deg, #0f1f18 0%, #111118 100%);
+            border: 1px solid rgba(0,230,138,0.12);
+            border-radius: var(--radius); position: relative; overflow: hidden;
+        }
+        .saldo-card::after {
+            content: ''; position: absolute; top: -40%; right: -20%;
+            width: 180px; height: 180px; border-radius: 50%;
+            background: radial-gradient(circle, var(--accent-glow), transparent 70%);
+            pointer-events: none;
+        }
+        .sc-label {
+            font-size: 11px; color: var(--fg-muted); text-transform: uppercase;
+            letter-spacing: 1.5px; font-weight: 500; margin-bottom: 8px;
+            display: flex; align-items: center; gap: 7px;
+        }
+        .sc-dot {
+            width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+            animation: blink 2.5s infinite;
+        }
+        @keyframes blink {
+            0%,100% { opacity: 1; } 50% { opacity: 0.3; }
+        }
+        .sc-amount {
+            font-family: 'JetBrains Mono', monospace; font-size: 30px; font-weight: 600;
+            color: #fff; position: relative; z-index: 1; word-break: break-all;
+        }
+        .sc-amount .cur { font-size: 17px; color: var(--fg-dim); margin-right: 2px; }
+        .sc-footer {
+            display: flex; align-items: center; gap: 12px;
+            margin-top: 14px; position: relative; z-index: 1;
+        }
+        .sc-meta {
+            display: flex; align-items: center; gap: 5px;
+            font-size: 11px; color: var(--fg-muted);
+        }
+        .sc-meta i { font-size: 10px; color: var(--accent); }
+        .sc-refresh {
+            margin-left: auto; background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.07); border-radius: var(--radius-xs);
+            padding: 5px 11px; color: var(--fg-muted); font-size: 11px;
+            cursor: pointer; transition: all 0.2s; font-family: inherit;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .sc-refresh:hover { background: var(--accent-dim); color: var(--accent); border-color: rgba(0,230,138,0.2); }
+        .sc-refresh.spin i { animation: spin 0.7s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .skeleton {
+            background: linear-gradient(90deg, var(--card) 25%, var(--card-hover) 50%, var(--card) 75%);
+            background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 6px;
+        }
+        @keyframes shimmer { to { background-position: -200% 0; } }
+
+        /* === SECTION TITLE === */
+        .sec-title {
+            font-size: 13px; font-weight: 600; margin: 24px 0 12px;
+            display: flex; align-items: center; gap: 8px; color: var(--fg-dim);
+            text-transform: uppercase; letter-spacing: 0.6px;
+        }
+        .sec-title .line { flex: 1; height: 1px; background: var(--border); }
+
+        /* === CSS WALLET LOGOS === */
+        .wallet-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .w-btn {
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+            padding: 14px 6px 12px; border-radius: var(--radius);
+            background: var(--card); border: 2px solid transparent;
+            cursor: pointer; transition: all 0.25s; position: relative;
+        }
+        .w-btn:hover { background: var(--card-hover); transform: translateY(-2px); }
+        .w-btn.sel { border-color: var(--accent); background: var(--accent-dim); box-shadow: 0 0 20px var(--accent-glow); }
+        .w-btn .chk {
+            position: absolute; top: 5px; right: 5px;
+            width: 17px; height: 17px; border-radius: 50%;
+            background: var(--accent); display: none;
+            align-items: center; justify-content: center;
+            font-size: 9px; color: #000;
+        }
+        .w-btn.sel .chk { display: flex; }
+        .w-btn .wname {
+            font-size: 10px; font-weight: 600; color: var(--fg-muted);
+            text-align: center; line-height: 1.2;
+        }
+        .w-btn.sel .wname { color: var(--accent); }
+
+        /* -- Logo DANA -- */
+        .logo-dana {
+            width: 42px; height: 42px; border-radius: 12px; position: relative;
+            background: var(--dana); display: flex; align-items: center; justify-content: center;
+            overflow: hidden; flex-shrink: 0;
+        }
+        .logo-dana::before {
+            content: ''; position: absolute; bottom: -2px; left: -2px;
+            width: 30px; height: 30px; border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+        }
+        .logo-dana span {
+            position: relative; z-index: 1; color: #fff; font-weight: 800;
+            font-size: 16px; letter-spacing: -1px; font-family: 'Space Grotesk', sans-serif;
+        }
+
+        /* -- Logo OVO -- */
+        .logo-ovo {
+            width: 42px; height: 42px; border-radius: 12px; position: relative;
+            background: var(--ovo); display: flex; align-items: center; justify-content: center;
+            overflow: hidden; flex-shrink: 0;
+        }
+        .logo-ovo::before {
+            content: ''; position: absolute; top: -8px; right: -8px;
+            width: 28px; height: 28px; border-radius: 50%;
+            background: rgba(255,255,255,0.12);
+        }
+        .logo-ovo::after {
+            content: ''; position: absolute; bottom: -6px; left: -6px;
+            width: 20px; height: 20px; border-radius: 50%;
+            background: rgba(255,255,255,0.08);
+        }
+        .logo-ovo span {
+            position: relative; z-index: 1; color: #fff; font-weight: 800;
+            font-size: 15px; letter-spacing: -0.5px; font-family: 'Space Grotesk', sans-serif;
+        }
+
+        /* -- Logo GoPay -- */
+        .logo-gopay {
+            width: 42px; height: 42px; border-radius: 12px; position: relative;
+            background: var(--gopay); display: flex; align-items: center; justify-content: center;
+            overflow: hidden; flex-shrink: 0;
+        }
+        .logo-gopay::before {
+            content: ''; position: absolute; top: 6px; left: 6px;
+            width: 10px; height: 10px; border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+        }
+        .logo-gopay span {
+            position: relative; z-index: 1; color: #fff; font-weight: 800;
+            font-size: 11px; letter-spacing: -0.3px; font-family: 'Space Grotesk', sans-serif;
+            text-transform: uppercase;
+        }
+
+        /* -- Logo ShopeePay -- */
+        .logo-shopeepay {
+            width: 42px; height: 42px; border-radius: 12px; position: relative;
+            background: var(--shopeepay); display: flex; align-items: center; justify-content: center;
+            overflow: hidden; flex-shrink: 0;
+        }
+        .logo-shopeepay::before {
+            content: ''; position: absolute; top: -4px; right: -4px;
+            width: 20px; height: 20px; border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+        }
+        .logo-shopeepay::after {
+            content: ''; position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
+            width: 26px; height: 4px; border-radius: 2px;
+            background: rgba(255,255,255,0.3);
+        }
+        .logo-shopeepay span {
+            position: relative; z-index: 1; color: #fff; font-weight: 800;
+            font-size: 9.5px; font-family: 'Space Grotesk', sans-serif;
+            text-transform: uppercase; letter-spacing: -0.2px;
+        }
+
+        /* === FORM === */
+        .form-sec { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
+        .fg { display: flex; flex-direction: column; gap: 5px; }
+        .fg label {
+            font-size: 11px; font-weight: 600; color: var(--fg-muted);
+            text-transform: uppercase; letter-spacing: 0.8px;
+        }
+        .fg input, .fg select {
+            background: var(--card); border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm); padding: 13px 14px;
+            color: var(--fg); font-family: 'JetBrains Mono', monospace;
+            font-size: 14px; outline: none; transition: all 0.2s; width: 100%;
+            -webkit-appearance: none;
+        }
+        .fg input::placeholder { color: #3a3a4a; font-family: 'Space Grotesk', sans-serif; font-size: 13px; }
+        .fg input:focus, .fg select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+        .fg input.err { border-color: var(--danger); box-shadow: 0 0 0 3px var(--danger-dim); }
+
+        .fg-qris {
+            display: flex; gap: 8px;
+        }
+        .fg-qris input { flex: 1; }
+        .fg-qris .qris-gen {
+            flex-shrink: 0; padding: 0 18px; border-radius: var(--radius-sm);
+            border: 1.5px solid var(--accent); background: var(--accent-dim);
+            color: var(--accent); font-family: inherit; font-size: 13px; font-weight: 600;
+            cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .fg-qris .qris-gen:hover { background: var(--accent); color: #000; }
+        .fg-qris .qris-gen:disabled { opacity: 0.4; cursor: not-allowed; }
+        .fg-qris .qris-gen.spin i { animation: spin 0.7s linear infinite; }
+
+        /* === PRESETS === */
+        .presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+        .pre-btn {
+            padding: 9px 6px; border-radius: var(--radius-xs);
+            background: var(--card); border: 1.5px solid var(--border);
+            color: var(--fg-dim); font-family: 'JetBrains Mono', monospace;
+            font-size: 12px; font-weight: 500; cursor: pointer;
+            transition: all 0.2s; text-align: center;
+        }
+        .pre-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+        .pre-btn.on { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+        /* === QRIS DISPLAY === */
+        .qris-display {
+            margin-top: 16px; display: none; flex-direction: column; align-items: center;
+            animation: panelIn 0.35s ease-out;
+        }
+        .qris-display.show { display: flex; }
+        .qris-frame {
+            background: #fff; padding: 16px; border-radius: var(--radius);
+            box-shadow: 0 8px 40px rgba(0,230,138,0.12);
+            position: relative;
+        }
+        .qris-frame img { width: 220px; height: 220px; display: block; border-radius: 4px; }
+        .qris-info {
+            margin-top: 12px; text-align: center;
+        }
+        .qris-info .qi-amount {
+            font-family: 'JetBrains Mono', monospace; font-size: 20px;
+            font-weight: 600; color: var(--accent);
+        }
+        .qris-info .qi-sub {
+            font-size: 11px; color: var(--fg-muted); margin-top: 4px;
+        }
+        .qris-info .qi-timer {
+            margin-top: 10px; font-size: 12px; color: var(--warn);
+            font-weight: 600; font-family: 'JetBrains Mono', monospace;
+            display: flex; align-items: center; gap: 5px; justify-content: center;
+        }
+        .qris-info .qi-timer i { font-size: 11px; }
+        .qris-regen {
+            margin-top: 10px; background: transparent; border: 1px solid var(--border);
+            border-radius: var(--radius-xs); padding: 7px 16px; color: var(--fg-dim);
+            font-family: inherit; font-size: 12px; cursor: pointer; transition: all 0.2s;
+        }
+        .qris-regen:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* === SUBMIT === */
+        .sub-btn {
+            margin-top: 8px; padding: 15px; border-radius: var(--radius);
+            border: none; cursor: pointer; font-family: inherit;
+            font-size: 14px; font-weight: 600; color: #000;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            box-shadow: 0 4px 24px var(--accent-glow);
+            transition: all 0.3s; display: flex; align-items: center;
+            justify-content: center; gap: 8px; position: relative; overflow: hidden;
+        }
+        .sub-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 32px rgba(0,230,138,0.3); }
+        .sub-btn:active:not(:disabled) { transform: translateY(0); }
+        .sub-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+        .sub-btn .spn {
+            width: 17px; height: 17px; border: 2.5px solid rgba(0,0,0,0.2);
+            border-top-color: #000; border-radius: 50%; animation: spin 0.7s linear infinite;
+            display: none;
+        }
+        .sub-btn.ld .spn { display: block; }
+        .sub-btn.ld .bt { display: none; }
+
+        /* === TOAST === */
+        .toast-wrap {
+            position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+            z-index: 9999; display: flex; flex-direction: column; gap: 8px;
+            width: calc(100% - 32px); max-width: 460px; pointer-events: none;
+        }
+        .toast {
+            padding: 13px 16px; border-radius: var(--radius-sm);
+            font-size: 13px; font-weight: 500; pointer-events: auto;
+            display: flex; align-items: center; gap: 9px;
+            animation: tIn 0.3s ease-out; backdrop-filter: blur(16px); border: 1px solid;
+        }
+        .toast.ok { background: rgba(0,230,138,0.1); border-color: rgba(0,230,138,0.2); color: var(--accent); }
+        .toast.err { background: rgba(255,68,102,0.1); border-color: rgba(255,68,102,0.2); color: var(--danger); }
+        .toast.inf { background: rgba(0,180,220,0.1); border-color: rgba(0,180,220,0.2); color: #00b4dc; }
+        .toast.out { animation: tOut 0.25s ease-in forwards; }
+        @keyframes tIn { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: none; } }
+        @keyframes tOut { to { opacity: 0; transform: translateY(-14px); } }
+
+        /* === MODAL === */
+        .modal-ov {
+            position: fixed; inset: 0; z-index: 5000;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
+            display: none; align-items: center; justify-content: center;
+            padding: 20px;
+        }
+        .modal-ov.on { display: flex; animation: fadeIn 0.2s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .modal-bx {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 26px; width: 100%;
+            max-width: 380px; animation: mSlide 0.3s ease-out;
+        }
+        @keyframes mSlide { from { opacity: 0; transform: translateY(16px) scale(0.97); } to { opacity: 1; transform: none; } }
+        .m-icon {
+            width: 52px; height: 52px; border-radius: 50%; margin: 0 auto 14px;
+            display: flex; align-items: center; justify-content: center; font-size: 22px;
+        }
+        .m-icon.ok { background: var(--accent-dim); color: var(--accent); }
+        .m-icon.err { background: var(--danger-dim); color: var(--danger); }
+        .modal-bx h3 { text-align: center; font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+        .modal-bx p { text-align: center; color: var(--fg-muted); font-size: 12px; line-height: 1.7; }
+        .m-details {
+            margin-top: 14px; background: var(--bg); border-radius: var(--radius-sm);
+            padding: 12px 14px; display: flex; flex-direction: column; gap: 7px;
+        }
+        .m-row { display: flex; justify-content: space-between; align-items: center; font-size: 11px; }
+        .m-row .ml { color: var(--fg-muted); }
+        .m-row .mv { color: var(--fg); font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+        .m-close {
+            margin-top: 18px; width: 100%; padding: 12px; border-radius: var(--radius-sm);
+            border: 1.5px solid var(--border); background: transparent;
+            color: var(--fg); font-family: inherit; font-size: 13px; font-weight: 500;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .m-close:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* === STATUS BAR === */
+        .sbar {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+            background: rgba(6,6,9,0.88); backdrop-filter: blur(12px);
+            border-top: 1px solid var(--border);
+            padding: 9px 16px; display: flex; align-items: center; gap: 7px;
+            font-size: 10px; color: var(--fg-muted);
+        }
+        .sdot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+        .sdot.on { background: var(--accent); box-shadow: 0 0 6px var(--accent-glow); animation: blink 2.5s infinite; }
+        .sdot.off { background: var(--danger); }
+
+        /* === FOOTER === */
+        .foot {
+            text-align: center; margin-top: 24px; padding-bottom: 48px;
+            font-size: 10px; color: #333; line-height: 1.7;
+        }
+
+        /* === RESPONSIVE === */
+        @media (max-width: 380px) {
+            .sc-amount { font-size: 24px; }
+            .wallet-grid { grid-template-columns: repeat(2, 1fr); }
+            .presets { grid-template-columns: repeat(2, 1fr); }
+            .fg-qris { flex-direction: column; }
+            .fg-qris .qris-gen { justify-content: center; padding: 12px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="atmo"><div class="orb"></div><div class="orb"></div><div class="orb"></div></div>
+<div class="grid-bg"></div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<div class="modal-ov" id="modal">
+    <div class="modal-bx" id="modalBx"></div>
+</div>
+
+<div class="app">
+
+    <header class="hdr">
+        <div class="hdr-logo">
+            <div class="hdr-icon"><i class="fa-solid fa-bolt"></i></div>
+            <h1>JoJo TopUp</h1>
+        </div>
+        <p>Jasa Isi Saldo E-Wallet Instan</p>
+    </header>
+
+    <!-- Saldo Card -->
+    <section class="saldo-card" aria-label="Saldo tersedia">
+        <div class="sc-label"><span class="sc-dot"></span> Saldo Tersedia</div>
+        <div class="sc-amount" id="saldoEl">
+            <span class="skeleton" style="width:180px;height:30px;display:inline-block;vertical-align:middle;"></span>
+        </div>
+        <div class="sc-footer">
+            <div class="sc-meta"><i class="fa-solid fa-clock"></i> <span id="lastUpd">Memuat...</span></div>
+            <button class="sc-refresh" id="refBtn" aria-label="Refresh saldo"><i class="fa-solid fa-rotate"></i> Refresh</button>
+        </div>
+    </section>
+
+    <!-- Tab Switch -->
+    <div class="tab-bar" role="tablist">
+        <div class="tab-slider" id="tabSlider"></div>
+        <button class="tab-btn active" role="tab" aria-selected="true" data-tab="topup" id="tabTopup">
+            <i class="fa-solid fa-paper-plane"></i> Kirim Saldo
+        </button>
+        <button class="tab-btn" role="tab" aria-selected="false" data-tab="qris" id="tabQris">
+            <i class="fa-solid fa-qrcode"></i> Top Up Saldo
+        </button>
+    </div>
+
+    <!-- ====== PANEL: KIRIM SALDO ====== -->
+    <div class="panel active" id="panelTopup" role="tabpanel">
+        <div class="sec-title"><span>Pilih E-Wallet</span><span class="line"></span></div>
+        <div class="wallet-grid" id="wGrid" role="radiogroup" aria-label="Pilih e-wallet tujuan"></div>
+
+        <form class="form-sec" id="topForm" autocomplete="off">
+            <div class="fg">
+                <label for="phIn">Nomor HP Tujuan</label>
+                <input type="tel" id="phIn" placeholder="08xx xxxx xxxx" maxlength="15" inputmode="numeric">
+            </div>
+            <div class="fg">
+                <label for="nomIn">Nominal</label>
+                <input type="text" id="nomIn" placeholder="Masukkan nominal bebas" inputmode="numeric" maxlength="12">
+            </div>
+            <div class="presets" id="preGrid"></div>
+            <button type="submit" class="sub-btn" id="subBtn" disabled>
+                <span class="bt"><i class="fa-solid fa-paper-plane"></i> Kirim Saldo</span>
+                <span class="spn"></span>
+            </button>
+        </form>
+    </div>
+
+    <!-- ====== PANEL: TOP UP SALDO (QRIS) ====== -->
+    <div class="panel" id="panelQris" role="tabpanel">
+        <div class="sec-title"><span>Masukkan Nominal Top Up</span><span class="line"></span></div>
+
+        <form class="form-sec" id="qrisForm" autocomplete="off">
+            <div class="fg-qris">
+                <div class="fg" style="flex:1">
+                    <input type="text" id="qrisAmt" placeholder="Nominal bebas, min 1.000" inputmode="numeric" maxlength="12">
+                </div>
+                <button type="button" class="qris-gen" id="genBtn">
+                    <i class="fa-solid fa-qrcode"></i> Generate
+                </button>
+            </div>
+            <div class="presets" id="qrisPreGrid"></div>
+        </form>
+
+        <div class="qris-display" id="qrisDisp">
+            <div class="qris-frame">
+                <img id="qrisImg" src="" alt="QRIS Payment">
+            </div>
+            <div class="qris-info">
+                <div class="qi-amount" id="qrisAmtLabel"></div>
+                <div class="qi-sub">Scan QRIS dengan e-wallet manapun</div>
+                <div class="qi-timer" id="qrisTimer" style="display:none">
+                    <i class="fa-solid fa-hourglass-half"></i> <span id="timerText"></span>
+                </div>
+                <button class="qris-regen" id="qrisRegen"><i class="fa-solid fa-arrows-rotate"></i> Generate Ulang</button>
+            </div>
+        </div>
+    </div>
+
+    <p class="foot">Proses instan via sistem JoJo Store. Pastikan nomor HP benar sebelum mengirim.</p>
+</div>
+
+<!-- Status Bar -->
+<div class="sbar">
+    <span class="sdot" id="sDot"></span>
+    <span id="sTxt">Menghubungkan...</span>
+</div>
+
+<script>
+    // ============================================================
+    // KONFIGURASI
+    // ============================================================
+    const API = 'https://jojostore-production.up.railway.app';
+
+    const WALLETS = [
+        { id: 'DANA',      name: 'DANA',      css: 'logo-dana' },
+        { id: 'OVO',       name: 'OVO',       css: 'logo-ovo' },
+        { id: 'GOPAY',     name: 'GoPay',     css: 'logo-gopay' },
+        { id: 'SHOPEEPAY', name: 'ShopeePay', css: 'logo-shopeepay' }
+    ];
+
+    const PRESETS_TOPUP = [10000, 20000, 25000, 50000, 100000, 200000];
+    const PRESETS_QRIS  = [10000, 20000, 50000, 100000, 200000, 500000];
+
+    // ============================================================
+    // STATE
+    // ============================================================
+    let selWallet = null;
+    let balance = 0;
+    let busy = false;
+    let qrisInterval = null;
+
+    // ============================================================
+    // DOM
+    // ============================================================
+    const $ = id => document.getElementById(id);
+    const saldoEl = $('saldoEl'), lastUpd = $('lastUpd'), refBtn = $('refBtn');
+    const wGrid = $('wGrid'), phIn = $('phIn'), nomIn = $('nomIn');
+    const preGrid = $('preGrid'), subBtn = $('subBtn'), topForm = $('topForm');
+    const toasts = $('toasts'), modal = $('modal'), modalBx = $('modalBx');
+    const sDot = $('sDot'), sTxt = $('sTxt');
+    const tabSlider = $('tabSlider'), tabTopup = $('tabTopup'), tabQris = $('tabQris');
+    const panelTopup = $('panelTopup'), panelQris = $('panelQris');
+    const qrisAmt = $('qrisAmt'), genBtn = $('genBtn'), qrisPreGrid = $('qrisPreGrid');
+    const qrisDisp = $('qrisDisp'), qrisImg = $('qrisImg'), qrisAmtLabel = $('qrisAmtLabel');
+    const qrisTimer = $('qrisTimer'), timerText = $('timerText'), qrisRegen = $('qrisRegen');
+
+    // ============================================================
+    // UTILITAS
+    // ============================================================
+    function fmtRp(n) { return 'Rp ' + Number(n).toLocaleString('id-ID'); }
+    function parseNum(s) { return Number(String(s).replace(/\D/g, '')) || 0; }
+    function setOnline(v) {
+        sDot.className = 'sdot ' + (v ? 'on' : 'off');
+        sTxt.textContent = v ? 'Terhubung ke JoJo Store' : 'Koneksi terputus';
+    }
+
+    // ============================================================
+    // TOAST
+    // ============================================================
+    function toast(msg, type = 'inf') {
+        const ic = { ok: 'fa-circle-check', err: 'fa-circle-xmark', inf: 'fa-circle-info' };
+        const el = document.createElement('div');
+        el.className = `toast ${type}`;
+        el.innerHTML = `<i class="fa-solid ${ic[type]||ic.inf}"></i><span>${msg}</span>`;
+        toasts.appendChild(el);
+        setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 250); }, 3500);
+    }
+
+    // ============================================================
+    // MODAL
+    // ============================================================
+    function showModal(type, title, msg, details) {
+        let h = `<div class="m-icon ${type}"><i class="fa-solid ${type==='ok'?'fa-check':'fa-xmark'}"></i></div>
+            <h3>${title}</h3><p>${msg}</p>`;
+        if (details && Object.keys(details).length) {
+            h += '<div class="m-details">';
+            for (const [k, v] of Object.entries(details))
+                h += `<div class="m-row"><span class="ml">${k}</span><span class="mv">${v}</span></div>`;
+            h += '</div>';
+        }
+        h += '<button class="m-close" onclick="closeModal()">Tutup</button>';
+        modalBx.innerHTML = h;
+        modal.classList.add('on');
+    }
+    function closeModal() { modal.classList.remove('on'); }
+    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    // ============================================================
+    // TAB SWITCHING
+    // ============================================================
+    function switchTab(tab) {
+        const isRight = tab === 'qris';
+        tabSlider.className = 'tab-slider' + (isRight ? ' right' : '');
+        tabTopup.classList.toggle('active', !isRight);
+        tabTopup.setAttribute('aria-selected', !isRight);
+        tabQris.classList.toggle('active', isRight);
+        tabQris.setAttribute('aria-selected', isRight);
+        panelTopup.classList.toggle('active', !isRight);
+        panelQris.classList.toggle('active', isRight);
+    }
+    tabTopup.addEventListener('click', () => switchTab('topup'));
+    tabQris.addEventListener('click', () => switchTab('qris'));
+
+    // ============================================================
+    // FETCH SALDO
+    // ============================================================
+    async function fetchSaldo(loading = false) {
+        if (loading) refBtn.classList.add('spin');
+        try {
+            const r = await fetch(`${API}/api/saldo`);
+            const d = await r.json();
+            if (d.success) {
+                balance = Number(d.balance) || 0;
+                saldoEl.innerHTML = `<span class="cur">Rp</span> ${balance.toLocaleString('id-ID')}`;
+                const t = new Date();
+                lastUpd.textContent = `Update ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}:${String(t.getSeconds()).padStart(2,'0')}`;
+                setOnline(true);
+            } else {
+                if (!loading) saldoEl.innerHTML = `<span style="color:var(--fg-muted);font-size:14px">Gagal memuat</span>`;
+                setOnline(false);
+            }
+        } catch(e) {
+            if (!loading) saldoEl.innerHTML = `<span style="color:var(--danger);font-size:14px">Tidak terhubung</span>`;
+            setOnline(false);
+        } finally { refBtn.classList.remove('spin'); }
+    }
+    refBtn.addEventListener('click', () => fetchSaldo(true));
+    setInterval(() => fetchSaldo(false), 30000);
+
+    // ============================================================
+    // RENDER WALLET GRID (CSS LOGOS)
+    // ============================================================
+    function renderWallets() {
+        wGrid.innerHTML = '';
+        WALLETS.forEach(w => {
+            const btn = document.createElement('button');
+            btn.type = 'button'; btn.className = 'w-btn';
+            btn.setAttribute('role', 'radio'); btn.setAttribute('aria-checked', 'false');
+            btn.dataset.w = w.id;
+            btn.innerHTML = `
+                <span class="chk"><i class="fa-solid fa-check"></i></span>
+                <div class="${w.css}"><span>${w.id.charAt(0)}${w.id.charAt(1)}</span></div>
+                <span class="wname">${w.name}</span>`;
+            btn.addEventListener('click', () => pickWallet(w.id));
+            wGrid.appendChild(btn);
+        });
+    }
+
+    function pickWallet(id) {
+        selWallet = id;
+        wGrid.querySelectorAll('.w-btn').forEach(b => {
+            const s = b.dataset.w === id;
+            b.classList.toggle('sel', s);
+            b.setAttribute('aria-checked', s);
+        });
+        valTopup();
+    }
+
+    // ============================================================
+    // RENDER PRESETS
+    // ============================================================
+    function renderPresets(container, values, inputEl) {
+        container.innerHTML = '';
+        values.forEach(v => {
+            const btn = document.createElement('button');
+            btn.type = 'button'; btn.className = 'pre-btn';
+            btn.textContent = fmtRp(v); btn.dataset.v = v;
+            btn.addEventListener('click', () => {
+                inputEl.value = v.toLocaleString('id-ID');
+                container.querySelectorAll('.pre-btn').forEach(b => b.classList.remove('on'));
+                btn.classList.add('on');
+                if (inputEl === nomIn) valTopup();
+            });
+            container.appendChild(btn);
+        });
+    }
+
+    // ============================================================
+    // FORMAT INPUT ANGKA
+    // ============================================================
+    function fmtInput(el) {
+        let raw = el.value.replace(/\D/g, '');
+        if (raw.length > 12) raw = raw.slice(0, 12);
+        el.value = raw ? Number(raw).toLocaleString('id-ID') : '';
+    }
+
+    nomIn.addEventListener('input', () => {
+        fmtInput(nomIn); nomIn.classList.remove('err');
+        // Sync preset highlight
+        const val = parseNum(nomIn.value);
+        preGrid.querySelectorAll('.pre-btn').forEach(b => {
+            b.classList.toggle('on', Number(b.dataset.v) === val);
+        });
+        valTopup();
+    });
+
+    phIn.addEventListener('input', () => {
+        phIn.value = phIn.value.replace(/\D/g, '');
+        phIn.classList.remove('err');
+        valTopup();
+    });
+
+    qrisAmt.addEventListener('input', () => {
+        fmtInput(qrisAmt); qrisAmt.classList.remove('err');
+        const val = parseNum(qrisAmt.value);
+        qrisPreGrid.querySelectorAll('.pre-btn').forEach(b => {
+            b.classList.toggle('on', Number(b.dataset.v) === val);
+        });
+    });
+
+    // ============================================================
+    // VALIDASI FORM TOPUP
+    // ============================================================
+    function valTopup() {
+        const ph = phIn.value.replace(/\D/g, '');
+        const nom = parseNum(nomIn.value);
+        const ok = selWallet && ph.length >= 10 && nom >= 1 && nom <= balance;
+        subBtn.disabled = !ok || busy;
+        return ok;
+    }
+
+    // ============================================================
+    // SUBMIT TOPUP
+    // ============================================================
+    topForm.addEventListener('submit', async e => {
+        e.preventDefault();
+        if (!valTopup() || busy) return;
+
+        const phone = phIn.value.replace(/\D/g, '');
+        const nominal = parseNum(nomIn.value);
+
+        if (nominal > balance) {
+            nomIn.classList.add('err');
+            toast(`Saldo tidak cukup. Tersedia: ${fmtRp(balance)}`, 'err');
+            return;
+        }
+        if (phone.length < 10) {
+            phIn.classList.add('err');
+            toast('Nomor HP tidak valid (min 10 digit)', 'err');
+            return;
+        }
+
+        busy = true; subBtn.classList.add('ld'); subBtn.disabled = true;
+        try {
+            const r = await fetch(`${API}/api/order`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ wallet: selWallet, phone, nominal })
+            });
+            const d = await r.json();
+            if (d.success) {
+                const wn = WALLETS.find(w => w.id === selWallet)?.name || selWallet;
+                showModal('ok', 'Topup Berhasil',
+                    `Saldo ${wn} sedang diproses. Silakan cek aplikasi e-wallet Anda.`,
+                    { 'ID Transaksi': d.id_trx || '-', 'E-Wallet': wn, 'Nomor HP': phone, 'Nominal': fmtRp(nominal) });
+                // Reset
+                phIn.value = ''; nomIn.value = '';
+                preGrid.querySelectorAll('.pre-btn').forEach(b => b.classList.remove('on'));
+                selWallet = null;
+                wGrid.querySelectorAll('.w-btn').forEach(b => { b.classList.remove('sel'); b.setAttribute('aria-checked','false'); });
+                setTimeout(() => fetchSaldo(), 2000);
+            } else {
+                showModal('err', 'Topup Gagal', d.message || 'Terjadi kesalahan saat memproses order.', {});
+            }
+        } catch(err) {
+            showModal('err', 'Koneksi Gagal', 'Tidak dapat terhubung ke server.', {});
+        } finally { busy = false; subBtn.classList.remove('ld'); valTopup(); }
+    });
+
+    // ============================================================
+    // GENERATE QRIS
+    // ============================================================
+    async function genQris() {
+        const amt = parseNum(qrisAmt.value);
+        if (amt < 1000) {
+            qrisAmt.classList.add('err');
+            toast('Minimal nominal Rp 1.000', 'err');
+            return;
+        }
+
+        genBtn.disabled = true;
+        genBtn.classList.add('spin');
+        qrisDisp.classList.remove('show');
+        clearQrisTimer();
+
+        try {
+            const r = await fetch(`${API}/api/qris?amount=${amt}`);
+            const d = await r.json();
+            if (d.success && d.qris_base64) {
+                qrisImg.src = `data:image/png;base64,${d.qris_base64}`;
+                qrisAmtLabel.textContent = fmtRp(amt);
+                qrisDisp.classList.add('show');
+                startQrisTimer(300); // 5 menit
+                toast('QRIS berhasil digenerate', 'ok');
+            } else {
+                toast(d.message || 'Gagal generate QRIS', 'err');
+            }
+        } catch(err) {
+            toast('Gagal terhubung ke server', 'err');
+        } finally {
+            genBtn.disabled = false;
+            genBtn.classList.remove('spin');
+        }
+    }
+
+    genBtn.addEventListener('click', genQris);
+    qrisRegen.addEventListener('click', genQris);
+
+    // Enter di input QRIS juga generate
+    qrisAmt.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); genQris(); } });
+
+    // ============================================================
+    // QRIS TIMER
+    // ============================================================
+    function startQrisTimer(seconds) {
+        clearQrisTimer();
+        let left = seconds;
+        qrisTimer.style.display = 'flex';
+        const update = () => {
+            const m = Math.floor(left / 60);
+            const s = left % 60;
+            timerText.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+            if (left <= 60) timerText.style.color = 'var(--danger)';
+            else timerText.style.color = 'var(--warn)';
+            left--;
+            if (left < 0) {
+                clearQrisTimer();
+                qrisTimer.style.display = 'none';
+                toast('QRIS sudah kadaluarsa. Silakan generate ulang.', 'err');
+            }
+        };
+        update();
+        qrisInterval = setInterval(update, 1000);
+    }
+
+    function clearQrisTimer() {
+        if (qrisInterval) { clearInterval(qrisInterval); qrisInterval = null; }
+    }
+
+    // ============================================================
+    // SSE REAL-TIME
+    // ============================================================
+    function connectSSE() {
+        try {
+            const es = new EventSource(`${API}/api/sse`);
+            es.addEventListener('connected', () => setOnline(true));
+            es.addEventListener('payment.in', e => {
+                try {
+                    const d = JSON.parse(e.data);
+                    toast(`Pembayaran masuk: ${fmtRp(d.amount)}`, 'ok');
+                    fetchSaldo(false);
+                    // Jika di tab QRIS, sembunyikan QRIS lama
+                    qrisDisp.classList.remove('show');
+                    clearQrisTimer();
+                } catch(_) {}
+            });
+            es.addEventListener('order.success', () => fetchSaldo(false));
+            es.addEventListener('withdraw.success', () => fetchSaldo(false));
+            es.onerror = () => { es.close(); setTimeout(connectSSE, 15000); };
+        } catch(_) {}
+    }
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    renderWallets();
+    renderPresets(preGrid, PRESETS_TOPUP, nomIn);
+    renderPresets(qrisPreGrid, PRESETS_QRIS, qrisAmt);
+    fetchSaldo(true);
+    connectSSE();
+</script>
+</body>
+</html>
